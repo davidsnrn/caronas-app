@@ -1,0 +1,5 @@
+{
+  "name": "Controle de Caronas",
+  "description": "A modern React application to manage carpool trips, payments, and weekly archives with local storage persistence.",
+  "requestFramePermissions": []
+}
