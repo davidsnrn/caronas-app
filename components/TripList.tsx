@@ -85,7 +85,8 @@ export const TripList: React.FC<TripListProps> = ({
            </h3>
            <div className="flex gap-2">
              <button 
-               onClick={() => onAddQuick(trip.day, type)}
+               type="button"
+               onClick={(e) => { e.stopPropagation(); onAddQuick(trip.day, type); }}
                className="text-xs font-semibold bg-white/50 hover:bg-white text-indigo-600 px-2 py-1 rounded transition-colors flex items-center gap-1"
                title="Adicionar Pessoa neste trecho"
              >

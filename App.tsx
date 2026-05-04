@@ -213,16 +213,24 @@ const App: React.FC = () => {
   };
 
   const handleQuickAdd = (day: string, type: TripType) => {
-    // day is like "Segunda-feira (04/05)"
-    // We need to convert it back to YYYY-MM-DD for the date input
-    const match = day.match(/\((\d{2})\/(\d{2})\)/);
+    const match = day.match(/\((\d{1,2})\/(\d{1,2})\)/);
+    
+    // Reset inputs to ensure a clean modal state
+    setParticipantSearchTerm('');
+    setNewParticipantInput('');
+    
     if (match) {
-      const d = match[1];
-      const m = match[2];
+      const d = match[1].padStart(2, '0');
+      const m = match[2].padStart(2, '0');
       const weekStart = parseStartDateFromWeekName(data.currentWeekName);
       const y = weekStart ? weekStart.getFullYear() : new Date().getFullYear();
       const isoDate = `${y}-${m}-${d}`;
+      
       setNewTripDate(isoDate);
+      setNewTripTypes(new Set([type]));
+      // Use a tiny timeout to ensure state updates are processed before showing modal
+      setTimeout(() => setModalOpen('addTrip'), 0);
+    } else {
       setNewTripTypes(new Set([type]));
       setModalOpen('addTrip');
     }
