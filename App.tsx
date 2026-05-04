@@ -10,7 +10,8 @@ import {
   generateParticipantId,
   getAllUniqueNames,
   generateShareText,
-  checkConnection
+  checkConnection,
+  normalizeString
 } from './services/dataUtils';
 import { Menu, Plus, Edit, RefreshCw, Loader2, Wifi, WifiOff, Search, X, Copy, Trash2, Database, Calendar, CheckSquare, Square } from 'lucide-react';
 
@@ -110,7 +111,9 @@ const App: React.FC = () => {
 
     const existing = data.active_trips.some(t => t.day === formattedDate && newTripTypes.has(t.type));
 
-    if (existing) {
+    // Se estivermos adicionando a mais de um tipo (Ida e Volta), não pré-selecionamos ninguém
+    // para evitar "clonar" participantes de um trecho para o outro.
+    if (existing && newTripTypes.size === 1) {
       setIsEditingExistingTrip(true);
       const firstMatch = data.active_trips.find(t => t.day === formattedDate && newTripTypes.has(t.type));
       if (firstMatch) {
@@ -209,6 +212,22 @@ const App: React.FC = () => {
     }
   };
 
+  const handleQuickAdd = (day: string, type: TripType) => {
+    // day is like "Segunda-feira (04/05)"
+    // We need to convert it back to YYYY-MM-DD for the date input
+    const match = day.match(/\((\d{2})\/(\d{2})\)/);
+    if (match) {
+      const d = match[1];
+      const m = match[2];
+      const weekStart = parseStartDateFromWeekName(data.currentWeekName);
+      const y = weekStart ? weekStart.getFullYear() : new Date().getFullYear();
+      const isoDate = `${y}-${m}-${d}`;
+      setNewTripDate(isoDate);
+      setNewTripTypes(new Set([type]));
+      setModalOpen('addTrip');
+    }
+  };
+
   const handleAddTrip = () => {
     if (!newTripDate) {
       alert("Selecione a data.");
@@ -236,24 +255,45 @@ const App: React.FC = () => {
     const newTripsList = [...data.active_trips];
     const selectedTypes = Array.from(newTripTypes);
 
+    // Se selecionarmos múltiplos tipos, usamos lógica de ADIÇÃO (merge)
+    // Se for apenas um tipo, usamos lógica de EDIÇÃO (replace)
+    const isBulkAdding = selectedTypes.length > 1;
+
     selectedTypes.forEach(type => {
       const existingIndex = newTripsList.findIndex(t => t.day === formattedDate && t.type === type);
 
       if (existingIndex >= 0) {
         const existingTrip = newTripsList[existingIndex];
-        const mergedParticipants: Participant[] = targetNames.map(name => {
-          const existingPerson = existingTrip.participants.find(p => p.name === name);
-          if (existingPerson) return existingPerson;
-          return { id: generateParticipantId(name), name, paid: false };
-        });
-        // Always ensure alphabetical order
+        
+        let mergedParticipants: Participant[];
+        
+        if (isBulkAdding) {
+          // Apenas adicionamos quem não está lá
+          const currentNames = new Set(existingTrip.participants.map(p => p.name));
+          const namesToAdd = targetNames.filter(n => !currentNames.has(n));
+          
+          if (namesToAdd.length === 0) return; // Nada a adicionar para este trecho específico
+          
+          const newParticipants: Participant[] = namesToAdd.map(name => ({
+            id: generateParticipantId(name), name, paid: false
+          }));
+          
+          mergedParticipants = [...existingTrip.participants, ...newParticipants];
+        } else {
+          // Modo Edição: substitui pela lista selecionada
+          mergedParticipants = targetNames.map(name => {
+            const existingPerson = existingTrip.participants.find(p => p.name === name);
+            if (existingPerson) return existingPerson;
+            return { id: generateParticipantId(name), name, paid: false };
+          });
+        }
+        
         mergedParticipants.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
         newTripsList[existingIndex] = { ...existingTrip, participants: mergedParticipants };
       } else {
         const participants: Participant[] = targetNames.map(name => ({
           id: generateParticipantId(name), name, paid: false
         }));
-        // Sort participants
         participants.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
         newTripsList.push({ day: formattedDate, time: null, type, participants });
       }
@@ -265,7 +305,7 @@ const App: React.FC = () => {
     setSelectedExistingNames(new Set());
     setNewTripDate('');
     setParticipantSearchTerm('');
-    showToast("✅ Carona(s) salva(s) com sucesso.");
+    showToast("✅ Dados salvos com sucesso.");
   };
 
   const handleDeleteTrip = (index: number) => {
@@ -340,7 +380,9 @@ const App: React.FC = () => {
   const filteredUniqueNames = useCallback(() => {
     const all = uniqueNames();
     if (!participantSearchTerm.trim()) return all;
-    return all.filter(name => name.toLowerCase().includes(participantSearchTerm.toLowerCase()));
+    
+    const term = normalizeString(participantSearchTerm);
+    return all.filter(name => normalizeString(name).includes(term));
   }, [uniqueNames, participantSearchTerm]);
 
   const toggleTripType = (type: TripType) => {
@@ -449,6 +491,7 @@ const App: React.FC = () => {
             onTogglePayment={handleTogglePayment}
             onDeleteParticipant={handleDeleteParticipant}
             onEditParticipantName={handleEditParticipantName}
+            onAddQuick={handleQuickAdd}
           />
         </main>
       </div>

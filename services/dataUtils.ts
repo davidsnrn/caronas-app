@@ -1,6 +1,16 @@
 import { supabase } from './supabaseClient';
 import { AppData, Trip, DEFAULT_WEEK_NAME } from '../types';
 
+/**
+ * Remove acentos e converte para minúsculas para buscas insensíveis a diacríticos.
+ */
+export const normalizeString = (str: string): string => {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+};
+
 const DB_ID = 1; // ID fixo para salvar o estado global da aplicação
 const LOCAL_STORAGE_KEY = 'carona_payment_data_v4';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trip, PAYMENT_VALUE, Participant } from '../types';
-import { Trash2, Edit2, UserX } from 'lucide-react';
+import { Trash2, Edit2, UserX, UserPlus } from 'lucide-react';
 import { parseStartDateFromWeekName } from '../services/dataUtils';
 
 interface TripListProps {
@@ -10,6 +10,7 @@ interface TripListProps {
   onDeleteTrip: (tripIndex: number) => void;
   onDeleteParticipant: (tripIndex: number, participantIndex: number) => void;
   onEditParticipantName: (tripIndex: number, participantIndex: number) => void;
+  onAddQuick: (day: string, type: 'Ida' | 'Volta') => void;
 }
 
 export const TripList: React.FC<TripListProps> = ({
@@ -18,7 +19,8 @@ export const TripList: React.FC<TripListProps> = ({
   onTogglePayment,
   onDeleteTrip,
   onDeleteParticipant,
-  onEditParticipantName
+  onEditParticipantName,
+  onAddQuick
 }) => {
   if (trips.length === 0) {
     return (
@@ -81,12 +83,21 @@ export const TripList: React.FC<TripListProps> = ({
            <h3 className="font-bold text-sm uppercase tracking-wide flex items-center gap-2">
              {type === 'Ida' ? '🌅' : '🌇'} {type}
            </h3>
-           <button 
-             onClick={() => onDeleteTrip(trip.originalIndex)}
-             className="text-xs font-semibold bg-white/50 hover:bg-white text-red-600 px-2 py-1 rounded transition-colors flex items-center gap-1"
-           >
-             <Trash2 size={12} /> Excluir
-           </button>
+           <div className="flex gap-2">
+             <button 
+               onClick={() => onAddQuick(trip.day, type)}
+               className="text-xs font-semibold bg-white/50 hover:bg-white text-indigo-600 px-2 py-1 rounded transition-colors flex items-center gap-1"
+               title="Adicionar Pessoa neste trecho"
+             >
+               <UserPlus size={12} /> Adicionar
+             </button>
+             <button 
+               onClick={() => onDeleteTrip(trip.originalIndex)}
+               className="text-xs font-semibold bg-white/50 hover:bg-white text-red-600 px-2 py-1 rounded transition-colors flex items-center gap-1"
+             >
+               <Trash2 size={12} /> Excluir
+             </button>
+           </div>
         </div>
         
         <div className="flex flex-col">
